@@ -1,44 +1,50 @@
-program = require 'commander'
-http    = require 'http'
+program  = require 'commander'
+http     = require 'http'
+socketio = require 'socket.io'
+uuid     = require 'node-uuid'
+app      = require('express')()
 
 program
   .version '0.0.1'
-  .option '-p, --port [port]', 'Port to listen to', 8008
-  .option '-H, --host [host]', 'Host to listen to', '0.0.0.0'
+  .option '-p, --port [port]', 'Port to listen to [8008]', 8008
+  .option '-w, --web [webport]', 'Port to listen for WebUI [8000]', 8000
   .parse process.argv
 
-host    = program.host
+io = null
+do createServer = ->
+  server = http.Server(app)
+  io = socketio server
+  app.get '/', (req, res) -> res.sendFile __dirname + '/webui.html'
+  app.get '/vkbeautify.js', (req, res) -> res.sendFile __dirname + '/vkbeautify.js'
+  server.listen program.web, -> console.log "WebUI on port: #{program.web}"
 
-server = http.createServer (req, res) -> 
-  body = ''
-  req.on 'data', (chunk) -> body += chunk
-  req.on 'end', -> 
-    console.log '>>> Forwarding to external service...'
-    forward req, body, res
+do createProxy = ->
+  proxy = http.createServer (req, res) -> 
+    body = ''
+    req.on 'data', (chunk) -> body += chunk
+    req.on 'end', -> 
+      forward req, body, res
 
-forward = (req, body, res) ->
-  console.log '-----------------------------'
-  host = req.headers.host.split(':')
-  options =
-    hostname: host[0]
-    port: host[1] or 80 
-    method: req.method
-    path: req.url
-    headers: req.headers
+  forward = (req, body, res) ->
+    id = uuid.v1()
+    host = req.headers.host.split(':')
+    options =
+      hostname: host[0]
+      port: host[1] or 80 
+      method: req.method
+      path: req.url
+      headers: req.headers
 
-  console.log 'Forwarding:'
-  console.dir {options, body}
-  req = http.request options, (response) ->
-    responseBody = ''
-    response.on 'data', (chunk) -> responseBody += chunk
-    response.on 'end', ->
-      console.log '<<< External service replied.'
-      console.dir {status: response.statusCode, headers: response.headers, responseBody}
-      console.log '-----------------------------'
-      res.writeHead response.statusCode, response.headers
-      res.end responseBody
-  req.write body if body
-  req.end()
+    io.emit 'outgoing', {id, options, body}
+    req = http.request options, (response) ->
+      responseBody = ''
+      response.on 'data', (chunk) -> responseBody += chunk
+      response.on 'end', ->
+        io.emit 'incoming', {id, status: response.statusCode, headers: response.headers, body: responseBody}
+        res.writeHead response.statusCode, response.headers
+        res.end responseBody
+    req.write body if body
+    req.end()
 
-server.listen program.port, program.host
-console.log "http://#{program.host}:#{ program.port }"
+  proxy.listen program.port
+  console.log "Proxying port: #{ program.port }"
