@@ -5,15 +5,25 @@
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font: 13px Helvetica, Arial; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages { list-style-type: none; margin-top: 70px; padding: 0;}
       #messages li.message { padding: 5px 10px; }
       #messages li.message:nth-child(odd) { background: #eee; }
       pre { margin-left: 30px; display: none;}
+      h1 { position: fixed; padding: 20px; background-color: #AAEEAA; left:0; right: 0; top: 0;}
+      .status { 
+        position: fixed; 
+        right: 0; 
+        bottom: 0; 
+        background-color: rgba(200, 200, 200, 0.3); 
+        padding: 5px 10px;
+        width: 300px;
+      }
     </style>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/vkbeautify.js"></script>
     <script>
+    var autoScroll = true;
 
       (function($) {
           $.fn.goTo = function() {
@@ -23,6 +33,17 @@
               return this; // for chaining...
           }
       })(jQuery);
+
+
+      function scrolledBottom() {
+        var scrollHeight = $(document).height();
+        var scrollPosition = $(window).height() + $(window).scrollTop();
+        return ((scrollHeight - scrollPosition) / scrollHeight <= 0);
+      }
+
+      $(document).on('scroll', function () {
+        autoScroll = scrolledBottom();
+      })
       var socket = io();
 
       function getHeaders(headers) {
@@ -73,10 +94,26 @@
               .append($('<pre class="xml-body">').text(vkbeautify.xml(data.body)));
             break;
         }
-        $main.goTo();
+        if (autoScroll) {
+          $main.goTo();
+        }
       }
 
-
+      socket.on('connect', function () {
+        $('.status').text('Connected');
+      });
+      socket.on('reconnect', function () {
+        $('.status').text('Reconnected');
+      });
+      socket.on('connect_error', function () {
+        $('.status').text('Connection error...');
+      });
+      socket.on('reconnect_attempt', function () {
+        $('.status').text('Reconnecting...');
+      });
+      socket.on('reconnect_error', function () {
+        $('.status').text('Reconnection error...');
+      });
       socket.on('incoming', function (data) {
         addMessage(data.id, 'incoming', data);
       });
@@ -86,6 +123,8 @@
     </script>
   </head>
   <body>
+    <h1>SOAP Proxy</h1>
+    <div class="status">Starting...</div>
     <ul id="messages"></ul>
   </body>
 </html>
