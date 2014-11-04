@@ -1,8 +1,9 @@
-program  = require 'commander'
-http     = require 'http'
-socketio = require 'socket.io'
-uuid     = require 'node-uuid'
-express  = require 'express'
+program          = require 'commander'
+http             = require 'http'
+socketio         = require 'socket.io'
+uuid             = require 'node-uuid'
+express          = require 'express'
+coffeeMiddleware = require 'coffee-middleware'
 
 program
   .version '0.0.1'
@@ -16,7 +17,8 @@ do createServer = ->
   server = http.Server(app)
   io = socketio server
 
-  app.use '/public', express.static __dirname + "/public"
+  app.use coffeeMiddleware src: "#{ __dirname }", compress: true
+  app.use '/public', express.static "#{ __dirname }/public"
   app.get '/', (req, res) -> res.sendFile __dirname + '/webui.html'
   
   server.listen program.web, -> console.log "WebUI on port: #{program.web}"
