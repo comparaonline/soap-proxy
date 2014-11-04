@@ -1,0 +1,15 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font: 13px Helvetica, Arial; }
+#messages { list-style-type: none; margin-top: 70px; padding: 0;}
+#messages li.message { padding: 5px 10px; }
+#messages li.message:nth-child(odd) { background: #eee; }
+pre { margin-left: 30px; display: none;}
+h1 { position: fixed; padding: 20px; background-color: #AAEEAA; left:0; right: 0; top: 0;}
+.status { 
+  position: fixed; 
+  right: 0; 
+  bottom: 0; 
+  background-color: rgba(200, 200, 200, 0.3); 
+  padding: 5px 10px;
+  width: 300px;
+}

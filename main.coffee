@@ -2,7 +2,7 @@ program  = require 'commander'
 http     = require 'http'
 socketio = require 'socket.io'
 uuid     = require 'node-uuid'
-app      = require('express')()
+express  = require 'express'
 
 program
   .version '0.0.1'
@@ -10,12 +10,15 @@ program
   .option '-w, --web [webport]', 'Port to listen for WebUI [8000]', 8000
   .parse process.argv
 
-io = null
+io  = null
 do createServer = ->
+  app = express()
   server = http.Server(app)
   io = socketio server
+
+  app.use '/public', express.static __dirname + "/public"
   app.get '/', (req, res) -> res.sendFile __dirname + '/webui.html'
-  app.get '/vkbeautify.js', (req, res) -> res.sendFile __dirname + '/vkbeautify.js'
+  
   server.listen program.web, -> console.log "WebUI on port: #{program.web}"
 
 do createProxy = ->
