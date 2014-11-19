@@ -27,25 +27,28 @@ do createProxy = ->
   proxy = http.createServer (req, res) -> 
     body = ''
     req.on 'data', (chunk) -> body += chunk
-    req.on 'end', -> 
-      forward req, body, res
+    req.on 'end', -> forward req, body, res
 
   forward = (req, body, res) ->
     id = uuid.v1()
     host = req.headers.host.split(':')
     options =
-      hostname: host[0]
-      port: host[1] or 80 
-      method: req.method
-      path: req.url
-      headers: req.headers
+      hostname : host[0]
+      port     : host[1] or 80
+      method   : req.method
+      path     : req.url
+      headers  : req.headers
 
     io.emit 'outgoing', {id, options, body}
     req = http.request options, (response) ->
       responseBody = ''
       response.on 'data', (chunk) -> responseBody += chunk
       response.on 'end', ->
-        io.emit 'incoming', {id, status: response.statusCode, headers: response.headers, body: responseBody}
+        io.emit 'incoming', 
+          id      : id
+          status  : response.statusCode
+          headers : response.headers
+          body    : responseBody
         res.writeHead response.statusCode, response.headers
         res.end responseBody
     req.write body if body
