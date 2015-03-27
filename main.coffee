@@ -20,11 +20,11 @@ do createServer = ->
   app.use coffeeMiddleware src: "#{ __dirname }", compress: true
   app.use '/public', express.static "#{ __dirname }/public"
   app.get '/', (req, res) -> res.sendFile __dirname + '/webui.html'
-  
+
   server.listen program.web, -> console.log "WebUI on port: #{program.web}"
 
 do createProxy = ->
-  proxy = http.createServer (req, res) -> 
+  proxy = http.createServer (req, res) ->
     body = ''
     req.on 'data', (chunk) -> body += chunk
     req.on 'end', -> forward req, body, res
@@ -42,16 +42,17 @@ do createProxy = ->
     io.emit 'outgoing', {id, options, body}
     req = http.request options, (response) ->
       responseBody = ''
+      res.writeHead response.statusCode, response.headers
+      response.pipe(res)
       response.on 'data', (chunk) -> responseBody += chunk
       response.on 'end', ->
-        io.emit 'incoming', 
+        io.emit 'incoming',
           id      : id
           status  : response.statusCode
           headers : response.headers
           body    : responseBody
-        res.writeHead response.statusCode, response.headers
-        res.end responseBody
     req.write body if body
+    req.on('error', (e) -> io.emit 'error', e)
     req.end()
 
   proxy.listen program.port

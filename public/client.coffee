@@ -17,7 +17,7 @@ do ($ = jQuery) ->
   $(document).on 'scroll', -> autoScroll = atBottom()
 
   getHeaders = (headers) ->
-    $dl = $('<dl class="headers">');
+    $dl = $('<dl class="headers dl-horizontal">');
     for name, value of headers
       $dl.append $('<dt>').text name
       $dl.append $('<dd>').text value
@@ -32,37 +32,53 @@ do ($ = jQuery) ->
         .toggle()
         .highlight()
   addMessage = (id, type, data) ->
-    $elem = $('#' + id)
+    $elem = $("##{id}")
 
     unless $elem.length
-      $elem = $ '<li class="message">'
-        .attr 'id', id
-        .appendTo $ '#messages'
+      $elem = $('<div class="message panel panel-default">').attr('id', id).appendTo $('#messages')
+      $elem.append $('<div class="panel-heading">').append $('<h1 class="panel-title">')
+      $panel_body = $('<div class="panel-body">').appendTo $elem
+      $container = $('<div class="container-fluid">').appendTo $panel_body
+      $ '<div class="row">'
+        .append $('<div class="part col-xs-6 outgoing">').append $('<h2>').text 'Request'
+        .append $('<div class="part col-xs-6 incoming">').append $('<h2>').text 'Response'
+        .appendTo $container
+      $ '<div class="row headers">'
+        .append $('<div class="part col-xs-6 outgoing">')
+        .append $('<div class="part col-xs-6 incoming">')
+        .appendTo $container
+      $ '<div class="row body">'
+        .append $('<div class="part col-xs-6 outgoing">').append showBody('View request body')
+        .append $('<div class="part col-xs-6 incoming">').append showBody('View response body')
+        .appendTo $container
 
-    $main = $ '<div class="part">'
-        .addClass type
-        .appendTo $elem
-
-    switch type
-      when 'outgoing'
-        $main
-          .append $('<div class="title">').text data.options.headers.soapaction
-          .append getHeaders data.options.headers
-          .append showBody('View request body')
-          .append $('<pre class="xml xml-body">').text vkbeautify.xml _.unescape data.body
-      when 'incoming'
-        $main
-          .append getHeaders data.headers
-          .append showBody('View response body')
-          .append $('<pre class="xml xml-body">').text vkbeautify.xml _.unescape data.body
-    $main.goTo() if autoScroll
+    title = data.options.headers.soapaction.replace(/(^")|("$)/gi, '') if type is 'outgoing'
+    $elem.find('h1').text title if title
+    headers = if type == 'incoming' then data.headers else data.options.headers
+    $elem.find(".headers > .#{type}").append getHeaders headers
+    code = $('<pre class="xml xml-body">')
+      .text vkbeautify.xml _.unescape data.body
+      .hide()
+    $elem.find(".body > .#{type}").append code
+    $elem.goTo() if autoScroll
 
   socket.on 'incoming', (data) -> addMessage data.id, 'incoming', data
   socket.on 'outgoing', (data) -> addMessage data.id, 'outgoing', data
 
+  change_status = (text, css) ->
+    $('.status').text text
+    $('.status').parent()
+        .removeClass('bg-warning')
+        .removeClass('bg-success')
+        .removeClass('bg-danger')
+        .addClass(css)
+  ok = (text) -> change_status text, 'bg-success'
+  warning = (text) -> change_status text, 'bg-warning'
+  danger = (text) -> change_status text, 'bg-danger'
+
   # Status bar
-  socket.on 'connect',           -> $('.status').text 'Connected'
-  socket.on 'reconnect',         -> $('.status').text 'Reconnected'
-  socket.on 'connect_error',     -> $('.status').text 'Connection error...'
-  socket.on 'reconnect_attempt', -> $('.status').text 'Reconnecting...'
-  socket.on 'reconnect_error',   -> $('.status').text 'Reconnection error...'
+  socket.on 'connect',           -> $ -> ok "Connected"
+  socket.on 'reconnect',         -> $ -> ok 'Reconnected'
+  socket.on 'connect_error',     -> $ -> warning 'Connection error...'
+  socket.on 'reconnect_attempt', -> $ -> warning 'Reconnecting...'
+  socket.on 'reconnect_error',   -> $ -> danger 'Reconnection error...'
