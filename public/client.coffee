@@ -24,13 +24,24 @@ do ($ = jQuery) ->
     $dl
 
   showBody = (name) ->
-    $('<div>').append $('<a href="#">').text(name).click (e) ->
+    $('<div>').append $('<a href="#"="#" role="button" class="btn btn-primary">').text(name).click (e) ->
       e.preventDefault()
       $(this)
         .closest('.part')
-        .find('.xml-body')
+        .find('.code-container')
         .toggle()
+        .find('.xml-body')
         .highlight()
+
+  download = (filename, text) ->
+    pom = document.createElement 'a'
+    pom.setAttribute 'href', 'data:text/plain;charset=utf-8,' + encodeURIComponent text
+    pom.setAttribute 'download', filename
+    pom.style.display = 'none';
+    document.body.appendChild pom
+    pom.click()
+    document.body.removeChild pom
+
   addMessage = (id, type, data) ->
     $elem = $("##{id}")
 
@@ -56,10 +67,15 @@ do ($ = jQuery) ->
     $elem.find('h1').text title if title
     headers = if type == 'incoming' then data.headers else data.options.headers
     $elem.find(".headers > .#{type}").append getHeaders headers
-    code = $('<pre class="xml xml-body">')
-      .text vkbeautify.xml _.unescape data.body
-      .hide()
-    $elem.find(".body > .#{type}").append code
+    $code_container = $('<div class="well code-container">').hide()
+    $code = $('<pre class="xml xml-body">').text vkbeautify.xml _.unescape data.body
+    $download_link = $('<a href="#" role="button" class="btn btn-default">Download</a>')
+    $download_link.click (e) ->
+        e.preventDefault()
+        download "#{$elem.find('h1').text()}.xml", vkbeautify.xml _.unescape data.body
+
+    $code_container.append [$code, $download_link]
+    $elem.find(".body > .#{type}").append $code_container
     $elem.goTo() if autoScroll
 
   socket.on 'incoming', (data) -> addMessage data.id, 'incoming', data
