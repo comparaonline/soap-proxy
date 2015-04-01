@@ -1,9 +1,9 @@
 program          = require 'commander'
 http             = require 'http'
 socketio         = require 'socket.io'
-uuid             = require 'node-uuid'
 express          = require 'express'
 coffeeMiddleware = require 'coffee-middleware'
+Proxy            = require './proxy'
 
 program
   .version '0.0.1'
@@ -23,37 +23,14 @@ do createServer = ->
 
   server.listen program.web, -> console.log "WebUI on port: #{program.web}"
 
-do createProxy = ->
-  proxy = http.createServer (req, res) ->
-    body = ''
-    req.on 'data', (chunk) -> body += chunk
-    req.on 'end', -> forward req, body, res
 
-  forward = (req, body, res) ->
-    id = uuid.v1()
-    host = req.headers.host.split(':')
-    options =
-      hostname : host[0]
-      port     : host[1] or 80
-      method   : req.method
-      path     : req.url
-      headers  : req.headers
+proxy = new Proxy(program.port)
 
-    io.emit 'outgoing', {id, options, body}
-    req = http.request options, (response) ->
-      responseBody = ''
-      res.writeHead response.statusCode, response.headers
-      response.pipe(res)
-      response.on 'data', (chunk) -> responseBody += chunk
-      response.on 'end', ->
-        io.emit 'incoming',
-          id      : id
-          status  : response.statusCode
-          headers : response.headers
-          body    : responseBody
-    req.write body if body
-    req.on('error', (e) -> io.emit 'error', e)
-    req.end()
+proxy.on 'log', (log) ->
+  console.log "[#{severity.toUpperCase()}] #{message}" for severity, message of log
+proxy.on 'error', (e) -> io.emit 'error', e
+proxy.on 'error', (e) -> console.error "[ERROR] #{e}"
+proxy.on 'request', (id, headers, body, status) -> io.emit 'request', {id, headers, body, status}
+proxy.on 'response', (id, headers, body) -> io.emit 'response', {id, headers, body}
 
-  proxy.listen program.port
-  console.log "Proxying port: #{ program.port }"
+proxy.start()

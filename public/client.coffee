@@ -51,21 +51,21 @@ do ($ = jQuery) ->
       $panel_body = $('<div class="panel-body">').appendTo $elem
       $container = $('<div class="container-fluid">').appendTo $panel_body
       $ '<div class="row">'
-        .append $('<div class="part col-xs-6 outgoing">').append $('<h2>').text 'Request'
-        .append $('<div class="part col-xs-6 incoming">').append $('<h2>').text 'Response'
+        .append $('<div class="part col-xs-6 request">').append $('<h2>').text 'Request'
+        .append $('<div class="part col-xs-6 response">').append $('<h2>').text 'Response'
         .appendTo $container
       $ '<div class="row headers">'
-        .append $('<div class="part col-xs-6 outgoing">')
-        .append $('<div class="part col-xs-6 incoming">')
+        .append $('<div class="part col-xs-6 request">')
+        .append $('<div class="part col-xs-6 response">')
         .appendTo $container
       $ '<div class="row body">'
-        .append $('<div class="part col-xs-6 outgoing">').append showBody('View request body')
-        .append $('<div class="part col-xs-6 incoming">').append showBody('View response body')
+        .append $('<div class="part col-xs-6 request">').append showBody('View request body')
+        .append $('<div class="part col-xs-6 response">').append showBody('View response body')
         .appendTo $container
 
-    title = data.options.headers.soapaction.replace(/(^")|("$)/gi, '') if type is 'outgoing'
+    title = data.headers.soapaction.replace(/(^")|("$)/gi, '') if type is 'request'
     $elem.find('h1').text title if title
-    headers = if type == 'incoming' then data.headers else data.options.headers
+    headers = data.headers
     $elem.find(".headers > .#{type}").append getHeaders headers
     $code_container = $('<div class="well code-container">').hide()
     $code = $('<pre class="xml xml-body">').text vkbeautify.xml _.unescape data.body
@@ -78,8 +78,8 @@ do ($ = jQuery) ->
     $elem.find(".body > .#{type}").append $code_container
     $elem.goTo() if autoScroll
 
-  socket.on 'incoming', (data) -> addMessage data.id, 'incoming', data
-  socket.on 'outgoing', (data) -> addMessage data.id, 'outgoing', data
+  socket.on 'response', (data) -> addMessage data.id, 'response', data
+  socket.on 'request', (data) -> addMessage data.id, 'request', data
 
   change_status = (text, css) ->
     $('.status').text text
