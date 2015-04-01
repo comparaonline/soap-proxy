@@ -1,6 +1,6 @@
 EventEmitter = require('events').EventEmitter
-http             = require 'http'
-uuid             = require 'node-uuid'
+http         = require 'http'
+uuid         = require 'node-uuid'
 
 getStreamContent = (stream, callback) ->
   content = ''
@@ -44,4 +44,5 @@ module.exports = class Proxy extends EventEmitter
       getStreamContent serviceResponse, (body) => @handleResponse serviceResponse, body, id
     serviceRequest.write body if body
     serviceRequest.on 'error', (e) => @emit 'error', e
+    serviceRequest.on 'error', (e) => @emit 'log', error: (e.message ? e.toString())
     serviceRequest.end()
